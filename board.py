@@ -31,11 +31,8 @@ class Board:
     # TODO: move to game logic
     blocked = []
     placed_tiles = []
-    for c in range(6):
-        corner_coord = Hex.axial_corners[c]
-        corner_tile = ((*corner_coord, c), (c, c))
-        placed_tiles.append(corner_tile)
     arrows = []
+    color_map = []
 
     # Coolors.co dark slate, champagne, copper, mulberry, purple, green
     # colors = ('#324B4B', '#E1D89F', '#CD8B76', '#C45BAA', '#7D387D', '#749C75')
@@ -68,15 +65,16 @@ class Board:
                     score_rect_color = (100, 100, 100) if i < 10 else (170, 170, 170)
                     pg.draw.rect(Board.screen, score_rect_color, score_rect_dim)
 
+                ac = (120, 120, 120) if p == turn else (255, 255, 170)
                 aw = inc[p][j] * sz
                 ax = sx + sm + scores[p][j] * (sz + sm) - aw
-                pg.draw.rect(Board.screen, (170, 170, 170), (ax, sy + 4 + j * (sz + sm) + p * py, aw, 4))
+                pg.draw.rect(Board.screen, ac, (ax, sy + 4 + j * (sz + sm) + p * py, aw, 4))
 
                 score_token_dim = (sx + scores[p][j] * (sz + sm), sy + j * (sz + sm) + p * py, sz, sz)
                 pg.draw.rect(Board.screen, Shapes.sprite_colors[j], score_token_dim)
 
-        tileset_count_sprite = font.render(str(tileset_count+1), False, (255, 255, 255))
-        Board.screen.blit(tileset_count_sprite, (30, 30))
+        # tileset_count_sprite = font.render(str(tileset_count+1), False, (255, 255, 255))
+        # Board.screen.blit(tileset_count_sprite, (30, 30))
 
     @staticmethod
     def draw_empty_hex(q, r):
@@ -117,6 +115,11 @@ class Board:
             hex_screen = Board.screen
         position = (Board.width / 2 + q * Board.size * 6 / 4, Board.width / 2 + (r + q / 2) * Board.size * sqrt(3))
         Board.draw_hexagon(position, Board.size, fill_color, hex_screen)
+
+    @staticmethod
+    def draw_line(s, k):
+        line = Board.get_line(s, k)
+        [Board.add_arrow(line[i], line[i+1], 0) for i in range(len(line)-1)]
 
     @staticmethod
     def draw_pair(coords, cols):
@@ -163,20 +166,52 @@ class Board:
         return Board.get_distance(Board.get_mouse_axial())
 
     @staticmethod
+    def get_color_coords(c):
+        coords = []
+        for pt in Board.placed_tiles:
+            if Board.is_on_board(pt[0][0:2]):
+                if pt[1][0] == c:
+                    coords.append(pt[0][0:2])
+            if Board.is_on_board(Board.get_other_coord(pt)):
+                if pt[1][1] == c:
+                    coords.append(Board.get_other_coord(pt))
+        return coords
+
+    @staticmethod
+    def get_color_map():
+        color_map = []
+        for i in range(6):
+            color_map.append(Board.get_color_coords(i))
+        return color_map
+
+
+    @staticmethod
     def get_distance(h, s=(0, 0)):
         return Hex.hex_distance(s, h)
 
     @staticmethod
-    def get_line(start, k, tiles=[]):
+    def get_line(start, k):
+        tiles = []
         coord = Hex.hex_neighbor(start, k)
         if Board.is_on_board(coord):
             tiles.append(coord)
-            Board.get_line(coord, k, tiles)
+            Board.get_line_step(coord, k, tiles)
         return tiles
+
+    @staticmethod
+    def get_line_step(coord, k, tiles):
+        coord = Hex.hex_neighbor(coord, k)
+        if Board.is_on_board(coord):
+            tiles.append(coord)
+            Board.get_line_step(coord, k, tiles)
 
     @staticmethod
     def get_next(tileset):
         return tileset.pop(0)
+
+    @staticmethod
+    def get_other_coord(tile):
+        return tuple(Hex.hex_neighbor(tile[0][0:2], tile[0][2]))
 
     @staticmethod
     def axial_to_screen(pos):
@@ -234,54 +269,70 @@ class Board:
         return choice(Board.colors)
 
     @staticmethod
-    def add_arrow(a, b, c):
-        Board.arrows.append((a, b, c))
+    def add_arrow(a, b, c, s=1):
+        Board.arrows.append((a, b, c, s))
 
     @staticmethod
-    def draw_arrow(a, b, c):
+    def draw_arrow(a, b, c, s=1):
         from_pos = Board.axial_to_screen(a)
         to_pos = Board.axial_to_screen(b)
-        pg.draw.line(Board.screen, Shapes.sprite_colors[c], from_pos, to_pos, 3)
-        pg.draw.circle(Board.screen, Shapes.sprite_colors[c], to_pos, 5)
+        pg.draw.line(Board.screen, Shapes.sprite_colors[c], from_pos, to_pos, 3*s)
+        pg.draw.circle(Board.screen, Shapes.sprite_colors[c], to_pos, 5*s)
+
+    @staticmethod
+    def score_line(tile):
+        Board.update_color_map()
+        score_inc = [0, 0, 0, 0, 0, 0]  # prepare scoring
+        t_coord = tile[0][0:2]
+        tk = tile[0][2]
+        tc = tile[1][0]
+
+        for k in range(6):
+            if k != tk:
+                line = Board.get_line(t_coord, k)
+                if len(line) > 0:
+                    for s in line:
+                        if tuple(s) in Board.color_map[tc]:
+                            Board.add_arrow(t_coord, s, 0, 2)
+                            score_inc[tc] += 1
+                        else:
+                            Board.add_arrow(t_coord, s, 5)
+                            break
+        return score_inc
 
     @staticmethod
     def score_tile(debugging=False):
         Board.arrows = []  # reset board arrows
-        score_inc = [0, 0, 0, 0, 0, 0]  # prepare scoring
 
         tile = Board.placed_tiles[len(Board.placed_tiles)-1]  # get newest tile
-        t_coord = tile[0][0:2]
         tk = tile[0][2]
-        tc = tile[1][0]
-        q_coord = Hex.hex_neighbor(tile[0][0:2], tile[0][2])
-        qc = tile[1][1]
-        not_newly_placed = Board.placed_tiles[0:len(Board.placed_tiles)-1]
-        for pt in not_newly_placed:
-            ((pq, pr, pk), (pa, pb)) = pt
-            p_coord = pt[0][0:2]
-            pk = pt[0][2]
-            pc = pt[1][0]
-            n_coord = Hex.hex_neighbor(p_coord, pk)
-            nc = pt[1][1]
-            # print("(tc, qc, pc, nc) " + str((tc, qc, pc, nc)))
-            if Board.is_touching(p_coord, t_coord):
-                Board.add_arrow(p_coord, t_coord, 0) if debugging else False # yellow
-                if pc == tc:
-                    # print("pc == tc")
-                    score_inc[pc] += 1
-            if Board.is_touching(n_coord, t_coord):
-                Board.add_arrow(n_coord, t_coord, 1) if debugging else False # orange
-                if nc == tc:
-                    # print("nc == tc")
-                    score_inc[nc] += 1
-            if Board.is_touching(p_coord, q_coord):
-                Board.add_arrow(p_coord, q_coord, 2) if debugging else False  # blue
-                if pc == qc:
-                    # print("pc == qc")
-                    score_inc[pc] += 1
-            if Board.is_touching(n_coord, q_coord):
-                Board.add_arrow(n_coord, q_coord, 3) if debugging else False  # green
-                if nc == qc:
-                    # print("nc == qc")
-                    score_inc[nc] += 1
+
+        q_coord = Board.get_other_coord(tile)
+        qk = (tk + 3) % 6
+        q_tile = ((*q_coord, qk), (tile[1][1], tile[1][0]))
+
+        score_tile = Board.score_line(tile)
+        score_q_tile = Board.score_line(q_tile)
+        score_inc = [a + b for a, b in zip(score_tile, score_q_tile)]
+
         return score_inc
+
+    # @staticmethod
+    # def traverse(line):
+    #     if len(line) == 0:
+    #         return 0
+    #     for pt in Board.placed_tiles:
+    #         print(pt) if pt[0][0:2] == line[0] else False
+    #         print(pt) if Hex.hex_neighbor(pt[0][0:2], pt[0][2]) == line[0] else False
+
+    @staticmethod
+    def update_color_map():
+        Board.color_map = Board.get_color_map()
+
+    @staticmethod
+    def populate_corners():
+        Board.placed_tiles = []
+        for c in range(6):
+            corner_coord = Hex.axial_corners[c]
+            corner_tile = ((*corner_coord, c), (c, c))
+            Board.placed_tiles.append(corner_tile)

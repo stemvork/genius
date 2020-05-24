@@ -70,11 +70,17 @@ class Game:
             Game.current_rot = 0
 
     @staticmethod
-    def rotate_current():
-        if Game.current_rot < 5:
-            Game.current_rot += 1
+    def rotate_current(rot=1):
+        if rot > 0:
+            if Game.current_rot < 5:
+                Game.current_rot += rot
+            else:
+                Game.current_rot = 0
         else:
-            Game.current_rot = 0
+            if Game.current_rot > 0:
+                Game.current_rot += rot
+            else:
+                Game.current_rot = 5
 
     @staticmethod
     def update_turn():
@@ -93,3 +99,23 @@ class Game:
             Game.update_turn()
             Board.arrows = []
 
+    @staticmethod
+    def start():
+        Game.running = True
+        Game.drawing = True
+        Game.debugging = False
+
+        Game.turn = 0
+        Game.current_tile = None
+        Game.current_rot = 0
+
+        Game.tileset = []
+        Game.populate_tileset()
+
+        Game.scores = [[0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0]]
+        Game.score_inc = [[0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0]]
+
+        Board.blocked = []
+        Board.arrows = []
+        Board.color_map = []
+        Board.populate_corners()
