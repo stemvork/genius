@@ -1,20 +1,34 @@
-from math import sqrt
-import random
-import pygame
+# General libraries
+from random import choice
+import pygame as pg
+from math import sqrt, floor
+
+# Project files
 from hex import Hex
 from shapes import Shapes
 
 
 class Board:
+    # Board sizes
     width = 800
     height = 800
     board_size = (width, height)
+    board_center = (width/2, height/2)
+
+    # Control sizes
+    control_width = 200
+    screen_size = (width + control_width, height)
+
+    # Hex sizes
     size = 25
     line_width = 1
-    tile_color = pygame.Color('#555555')
-    colors = [pygame.Color(c) for c in ('#324B4B', '#D56CA5', '#69E1FA', '#5292BD', '#B3E08B', '#E25E3A')]
+
+    # Colors
+    tile_color = pg.Color('#555555')
+    colors = [pg.Color(c) for c in ('#324B4B', '#D56CA5', '#69E1FA', '#5292BD', '#B3E08B', '#E25E3A')]
     screen = None
 
+    # TODO: move to game logic
     blocked = []
     placed_tiles = []
 
@@ -23,23 +37,6 @@ class Board:
 
     def __constructor__(self):
         pass
-
-    # @staticmethod
-    # def cursor(k):
-    #     mouse_pos = Board.get_clicked()
-    #     neighbor_pos = Hex.hex_neighbor(mouse_pos, k)
-    #     Board.cursor_axial(*mouse_pos)
-    #     Board.cursor_axial(*neighbor_pos)
-    #
-    # @staticmethod
-    # def cursor_axial(q, r):
-    #     surface_rect = Board.screen.get_rect()
-    #     surface_size = (surface_rect.width, surface_rect.height)
-    #     mouse_surface = pygame.Surface(surface_size)
-    #     mouse_surface.set_alpha(100)
-    #     mouse_surface.set_colorkey(0)
-    #     Board.draw_hexagon_axial(q, r, (255, 255, 255), mouse_surface)
-    #     Board.screen.blit(mouse_surface, (0, 0))
 
     @staticmethod
     def draw(screen):
@@ -53,15 +50,24 @@ class Board:
             Board.draw_empty_primary(*Hex.axial_corners[c], c)
 
     @staticmethod
-    def draw_control(font, scores, text=True):
-        if text:
-            letters = ("Y", "O", "B", "G", "P", "R")
-            for j in range(2):
-                for i in range(6):
-                    letter_sprite = font.render(letters[i] + ": ", False, Shapes.sprite_colors[i])
-                    Board.screen.blit(letter_sprite, (Board.width - 50, Board.height/3 * (j+1) + 30 * i))
-                    score_sprite = font.render(str(scores[j][i]), False, Shapes.sprite_colors[i])
-                    Board.screen.blit(score_sprite, (Board.width, Board.height/3 * (j+1) + 30 * i))
+    def draw_control(font, scores, names, tileset_count):
+        sz = floor(220/18)  # square size
+        sm = max(1, floor(sz/10))
+        sx = Board.width - 60
+        sy = 45 - floor(sz / 4)
+        py = 11 * sz
+        for p in range(2):
+            name_sprite = font.render(names[p], False, (255, 255, 255))
+            name_coords = (Board.screen_size[0] - 26 - font.size(names[p])[0], 8 + p * py)
+            Board.screen.blit(name_sprite, name_coords)
+            for j in range(6):
+                for i in range(18):
+                    score_rect_dim = (sx + i * (sz + sm), sy + j * (sz + sm) + p * py, sz, sz)
+                    pg.draw.rect(Board.screen, (100, 100, 100), score_rect_dim)
+                score_token_dim = (sx + scores[p][j] * (sz + sm), sy + j * (sz + sm) + p * py, sz, sz)
+                pg.draw.rect(Board.screen, Shapes.sprite_colors[j], score_token_dim)
+        tileset_count_sprite = font.render(str(tileset_count+1), False, (255, 255, 255))
+        Board.screen.blit(tileset_count_sprite, (30, 30))
 
     @staticmethod
     def draw_empty_hex(q, r):
@@ -74,13 +80,13 @@ class Board:
         params = Shapes.plot_primary(Board.board_size, Board.size, q, r, c)
         color = Shapes.get_sprite_color(c)
         if c in [0, 2, 4]:
-            pygame.draw.polygon(Board.screen, color, params)
+            pg.draw.polygon(Board.screen, color, params)
         elif c == 1:
             Board.draw_hexagon(*params, color)
         elif c == 3:
-            pygame.draw.circle(Board.screen, color, *params)
+            pg.draw.circle(Board.screen, color, *params)
         elif c == 5:
-            pygame.draw.circle(Board.screen, color, *params)
+            pg.draw.circle(Board.screen, color, *params)
 
     @staticmethod
     def draw_empty_tile(q, r, k=0):
@@ -92,9 +98,9 @@ class Board:
     def draw_hexagon(center, s, fill_color, hex_screen=None):
         if not hex_screen:
             hex_screen = Board.screen
-        pygame.draw.polygon(hex_screen, fill_color, [Hex.hex_corner(center, s, p) for p in range(6)])
-        pygame.draw.polygon(hex_screen, Board.colors[0],
-                            [Hex.hex_corner(center, s, p) for p in range(6)], Board.line_width)
+        pg.draw.polygon(hex_screen, fill_color, [Hex.hex_corner(center, s, p) for p in range(6)])
+        pg.draw.polygon(hex_screen, Board.colors[0],
+                        [Hex.hex_corner(center, s, p) for p in range(6)], Board.line_width)
 
     @staticmethod
     def draw_hexagon_axial(q, r, fill_color, hex_screen=None):
@@ -112,24 +118,24 @@ class Board:
         params1 = Shapes.plot_primary(Board.board_size, Board.size, q, r, c1)
         color1 = Shapes.get_sprite_color(c1)
         if c1 in [0, 2, 4]:
-            pygame.draw.polygon(Board.screen, color1, params1)
+            pg.draw.polygon(Board.screen, color1, params1)
         elif c1 == 1:
             Board.draw_hexagon(*params1, color1)
         elif c1 == 3:
-            pygame.draw.circle(Board.screen, color1, *params1)
+            pg.draw.circle(Board.screen, color1, *params1)
         elif c1 == 5:
-            pygame.draw.circle(Board.screen, color1, *params1)
+            pg.draw.circle(Board.screen, color1, *params1)
         (nq, nr) = Hex.hex_neighbor((q, r), k)
         params2 = Shapes.plot_primary(Board.board_size, Board.size, nq, nr, c2)
         color2 = Shapes.get_sprite_color(c2)
         if c2 in [0, 2, 4]:
-            pygame.draw.polygon(Board.screen, color2, params2)
+            pg.draw.polygon(Board.screen, color2, params2)
         elif c2 == 1:
             Board.draw_hexagon(*params2, color2)
         elif c2 == 3:
-            pygame.draw.circle(Board.screen, color2, *params2)
+            pg.draw.circle(Board.screen, color2, *params2)
         elif c2 == 5:
-            pygame.draw.circle(Board.screen, color2, *params2)
+            pg.draw.circle(Board.screen, color2, *params2)
 
     @staticmethod
     def draw_ring(center, n, fill_color):
@@ -137,15 +143,15 @@ class Board:
             Board.draw_hexagon_axial(p[0], p[1], fill_color)
 
     @staticmethod
-    def get_clicked():
-        pos = pygame.mouse.get_pos()
+    def get_mouse_axial():
+        pos = pg.mouse.get_pos()
         q = (2. / 3 * (pos[0] - Board.width / 2)) / Board.size
         r = (-1. / 3 * (pos[0] - Board.width / 2) + sqrt(3) / 3 * (pos[1] - Board.height / 2)) / Board.size
         return Hex.hex_round((q, r))
 
     @staticmethod
     def get_clicked_distance():
-        return Board.get_distance(Board.get_clicked())
+        return Board.get_distance(Board.get_mouse_axial())
 
     @staticmethod
     def get_distance(h, s=(0, 0)):
@@ -175,15 +181,20 @@ class Board:
                     return True
 
     @staticmethod
+    def is_on_board(coord):
+        if Hex.hex_distance((0, 0), coord) > 7:
+            return False
+        else:
+            return True
+
+    @staticmethod
     def place(current_tile, current_rot):
-        (q, r) = Board.get_clicked()
-        if Board.is_legal((q, r, current_rot)):
-            tile = ((q, r, current_rot), current_tile)
-            neighbor = Hex.hex_neighbor((q, r), current_rot)
-            (nq, nr) = neighbor
-            neighbor_tile = ((nq, nr), current_rot)
-            Board.blocked.append((q, r))
-            Board.blocked.append((nq, nr))
+        coord = Board.get_mouse_axial()
+        if Board.is_legal((*coord, current_rot)):
+            tile = ((*coord, current_rot), current_tile)
+            neighbor = Hex.hex_neighbor(coord, current_rot)
+            Board.blocked.append(coord)
+            Board.blocked.append(neighbor)
 
             Board.placed_tiles.append(tile)
 
@@ -193,7 +204,7 @@ class Board:
 
     @staticmethod
     def random_color():
-        return random.choice(Board.colors)
+        return choice(Board.colors)
 
     @ staticmethod
     def score(player):
