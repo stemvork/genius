@@ -27,10 +27,12 @@ while Game.running:
         if event.type == pygame.QUIT:
             Game.running = False
         if event.type == pygame.KEYDOWN:  # continue game upon right arrow key
-            if event.key == pygame.K_RIGHT and Game.debugging is True:
-                Game.drawing = True
+            if event.key == pygame.K_RIGHT:
+                Game.next_tile()
             elif event.key == pygame.K_SPACE:  # press space to rotate tile
                 Game.rotate_current()
+            # TODO: press N to start new game
+            # TODO: write init game function to call to
         if event.type == pygame.MOUSEBUTTONDOWN:
             if pygame.mouse.get_pressed()[2]:  # right mouse button for undo
                 Game.undo()
@@ -43,6 +45,8 @@ while Game.running:
         Game.draw_placed_tiles()
         if Board.is_on_board(Board.get_mouse_axial()):
             Game.draw_cursor()
+        [Board.draw_arrow(*x) for x in Board.arrows]
+        Game.draw_edge()
 
         pygame.display.flip()
         if Game.debugging:
