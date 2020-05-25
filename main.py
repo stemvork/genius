@@ -21,7 +21,6 @@ Game.start()
 # Application loop
 while Game.running:
     # Event checks
-    # TODO: Refactor event handling
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             Game.running = False
@@ -44,9 +43,9 @@ while Game.running:
     if Game.drawing:
         Game.draw(screen)
         Game.draw_placed_tiles()
+        [Board.draw_arrow(*x) for x in Board.arrows]  # if Game.debugging else False
         if Board.is_on_board(Board.get_mouse_axial()):
             Game.draw_cursor()
-        [Board.draw_arrow(*x) for x in Board.arrows]  # if Game.debugging else False
         Game.draw_edge()
 
         pygame.display.flip()

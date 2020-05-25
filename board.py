@@ -28,17 +28,11 @@ class Board:
     colors = [pg.Color(c) for c in ('#324B4B', '#D56CA5', '#69E1FA', '#5292BD', '#B3E08B', '#E25E3A')]
     screen = None
 
-    # TODO: move to game logic
+    # ???? TODO: move to game logic
     blocked = []
     placed_tiles = []
     arrows = []
     color_map = []
-
-    # Coolors.co dark slate, champagne, copper, mulberry, purple, green
-    # colors = ('#324B4B', '#E1D89F', '#CD8B76', '#C45BAA', '#7D387D', '#749C75')
-
-    def __constructor__(self):
-        pass
 
     @staticmethod
     def draw(screen):
@@ -47,8 +41,10 @@ class Board:
             Board.draw_ring((0, 0), k, Board.colors[2])
         Board.draw_hexagon_axial(0, 0, Board.colors[3])
 
+    # noinspection PyUnusedLocal
     @staticmethod
     def draw_control(font, scores, inc, turn, names, tileset_count):
+        # TODO: huge method
         sz = floor(220/19)  # square size
         sm = max(1, floor(sz/10))
         sx = Board.width - 60
@@ -184,7 +180,6 @@ class Board:
             color_map.append(Board.get_color_coords(i))
         return color_map
 
-
     @staticmethod
     def get_distance(h, s=(0, 0)):
         return Hex.hex_distance(s, h)
@@ -219,31 +214,37 @@ class Board:
         return Board.width / 2 + q * Board.size * 6 / 4, Board.width / 2 + (r + q / 2) * Board.size * sqrt(3)
 
     @staticmethod
-    def is_legal(coords):
-        # TODO: disallow placing without connecting
-        (q, r, k) = coords
-        distance = Board.get_distance((q, r))
-        if distance <= 6:
-            (nq, nr) = Hex.hex_neighbor((q, r), k)
-            neighbor_distance = Board.get_distance((nq, nr))
-            # Check if clicked on 2-player board => distance 6
-            if neighbor_distance <= 6:
-                # exit if square is non-empty
-                if (q, r) in Board.blocked:
-                    print("clicked in blocked")
-                    return False
-                elif (nq, nr) in Board.blocked:
-                    print("neighbor in blocked")
-                    return False
-                else:
-                    return True
-
-    @staticmethod
     def is_on_board(coord):
         if Hex.hex_distance((0, 0), coord) > 6:
             return False
         else:
             return True
+
+    @staticmethod
+    def is_legal(coords):
+        (q, r, k) = coords
+        tile = (q, r)
+        if Board.is_on_board((q, r)):
+            neighbor = Hex.hex_neighbor((q, r), k)
+            # Check if clicked on 2-player board => distance 6
+            if Board.is_on_board(neighbor):
+                # exit if square is non-empty
+                if tile in Board.blocked:
+                    print("clicked in blocked")
+                    return False
+                elif neighbor in Board.blocked:
+                    print("neighbor in blocked")
+                    return False
+                else:
+                    distances_tile = [Hex.hex_distance(tile, pt[0][0:2]) for pt in Board.placed_tiles]
+                    distances_other = [Hex.hex_distance(tile, Board.get_other_coord(pt)) for pt in Board.placed_tiles]
+                    neighbor_tile = [Hex.hex_distance(neighbor, pt[0][0:2]) for pt in Board.placed_tiles]
+                    neighbor_other = [Hex.hex_distance(neighbor, Board.get_other_coord(pt)) for pt in Board.placed_tiles]
+                    distances = distances_tile + distances_other + neighbor_tile + neighbor_other
+                    if min(distances) > 1:
+                        return False
+                    else:
+                        return True
 
     @staticmethod
     def is_touching(a, b):
@@ -276,8 +277,11 @@ class Board:
     def draw_arrow(a, b, c, s=1):
         from_pos = Board.axial_to_screen(a)
         to_pos = Board.axial_to_screen(b)
-        pg.draw.line(Board.screen, Shapes.sprite_colors[c], from_pos, to_pos, 3*s)
-        pg.draw.circle(Board.screen, Shapes.sprite_colors[c], to_pos, 5*s)
+        if c == 0:
+            pg.draw.line(Board.screen, Shapes.sprite_colors[c], from_pos, to_pos, 3*s)
+            pg.draw.circle(Board.screen, Shapes.sprite_colors[c], to_pos, 5*s)
+        else:
+            pg.draw.circle(Board.screen, Shapes.sprite_colors[c], to_pos, 3*s)
 
     @staticmethod
     def score_line(tile):
@@ -301,7 +305,7 @@ class Board:
         return score_inc
 
     @staticmethod
-    def score_tile(debugging=False):
+    def score_tile():
         Board.arrows = []  # reset board arrows
 
         tile = Board.placed_tiles[len(Board.placed_tiles)-1]  # get newest tile
@@ -316,14 +320,6 @@ class Board:
         score_inc = [a + b for a, b in zip(score_tile, score_q_tile)]
 
         return score_inc
-
-    # @staticmethod
-    # def traverse(line):
-    #     if len(line) == 0:
-    #         return 0
-    #     for pt in Board.placed_tiles:
-    #         print(pt) if pt[0][0:2] == line[0] else False
-    #         print(pt) if Hex.hex_neighbor(pt[0][0:2], pt[0][2]) == line[0] else False
 
     @staticmethod
     def update_color_map():

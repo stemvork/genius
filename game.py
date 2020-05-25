@@ -22,7 +22,8 @@ class Game:
     def draw(screen):
         screen.fill(Board.colors[0])
         Board.draw(screen)
-        Board.draw_control(Game.default_font, Game.scores, Game.score_inc, Game.turn, Game.player_names, len(Game.tileset))
+        Board.draw_control(Game.default_font, Game.scores, Game.score_inc,
+                           Game.turn, Game.player_names, len(Game.tileset))
 
     @staticmethod
     def draw_cursor():
@@ -90,13 +91,15 @@ class Game:
     @staticmethod
     def undo():
         if len(Board.placed_tiles) > 0:
-            # TODO: undo score
             Game.tileset.insert(0, Game.current_tile)
             Game.current_tile = Board.placed_tiles.pop()[1]
             Board.blocked.pop()
             Board.blocked.pop()
             Game.current_rot = 0
             Game.update_turn()
+            for i in range(6):
+                Game.scores[Game.turn][i] -= Game.score_inc[Game.turn][i]
+                Game.score_inc[Game.turn][i] = 0
             Board.arrows = []
 
     @staticmethod
