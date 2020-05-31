@@ -2,6 +2,7 @@ import random
 from board import Board
 
 
+# noinspection PyUnusedLocal
 class Game:
     running = False
     drawing = False
@@ -44,7 +45,7 @@ class Game:
         Board.draw_overlays()
 
     @staticmethod
-    def next_tile():
+    def next_tile_cursor():
         Game.current_tile = Game.tileset.pop(0)
         Game.current_rot = 0
 
@@ -60,7 +61,7 @@ class Game:
                 for i in range(max_i):
                     Game.tileset.append((c1, c2))
         random.shuffle(Game.tileset)
-        Game.next_tile()
+        Game.next_tile_cursor()
 
     @staticmethod
     def play():
@@ -118,6 +119,7 @@ class Game:
         Board.count_available()
         Board.count_available_pairs()
 
+    # noinspection PyUnusedLocal
     @staticmethod
     def start():
         Game.running = True
@@ -131,7 +133,8 @@ class Game:
         Game.tileset = []
         Game.populate_tileset()
 
-        Game.scores = [[16 for i in range(6)] for p in range(2)]
+        Game.scores = [[0 for i in range(6)] for p in range(2)]
+        # noinspection PyUnusedLocal
         Game.score_inc = [[0 for i in range(6)] for p in range(2)]
         Game.color_just_finished = [[False for i in range(6)] for p in range(2)]
 

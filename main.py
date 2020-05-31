@@ -9,7 +9,7 @@ pygame.init()
 screen = pygame.display.set_mode(Board.screen_size)
 # display = pygame.display.setmode((0, 0), pygame.FULLSCREEN)
 # screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
-pygame.display.set_caption("Genius v0.3")
+pygame.display.set_caption("Genius v0.5")
 icon = pygame.image.load('genius_logo.png')
 pygame.display.set_icon(icon)
 clock = pygame.time.Clock()
@@ -29,7 +29,7 @@ while Game.running:
             Game.running = False
         if event.type == pygame.KEYDOWN:  # continue game upon right arrow key
             if event.key == pygame.K_SPACE:
-                Game.next_tile()
+                Game.next_tile_cursor()
             elif event.key == pygame.K_RIGHT:  # press space to rotate tile
                 Game.rotate_current(-1)
             elif event.key == pygame.K_LEFT:
