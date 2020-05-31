@@ -68,7 +68,7 @@ class Hex:
     @staticmethod
     def hex_neighbor(h, direction):  # sense-making
         dr = Hex.hex_direction(direction)
-        return Hex.cube_add(h, dr)
+        return tuple(Hex.cube_add(h, dr))
 
     @staticmethod
     def hex_ring(center, n):  # forward compatibility

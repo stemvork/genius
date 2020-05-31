@@ -13,16 +13,18 @@ class Game:
 
     tileset = []
     player_names = ["Jasper", "Joana"]
-    scores = [[0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0]]
-    score_inc = [[0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0]]
+    scores = []
+    score_inc = []
+    color_just_finished = []
 
     default_font = None
+    small_font = None
 
     @staticmethod
     def draw(screen):
         screen.fill(Board.colors[0])
         Board.draw(screen)
-        Board.draw_control(Game.default_font, Game.scores, Game.score_inc,
+        Board.draw_control(Game.default_font, Game.small_font, Game.scores, Game.score_inc,
                            Game.turn, Game.player_names, len(Game.tileset))
 
     @staticmethod
@@ -39,6 +41,7 @@ class Game:
         if len(Board.placed_tiles) > 0:
             for pt in Board.placed_tiles:
                 Board.draw_pair(*pt)
+        Board.draw_overlays()
 
     @staticmethod
     def next_tile():
@@ -64,11 +67,19 @@ class Game:
         if Board.place(Game.current_tile, Game.current_rot):
             score_inc = Board.score_tile()
             for i in range(6):
+                if score_inc[i] >= 18 - Game.scores[Game.turn][i]:
+                    Game.color_just_finished[Game.turn][i] = True
+                    score_inc[i] = 18 - Game.scores[Game.turn][i]
+                    # TODO: implement bonus turn function
+                    # print("Give bonus for color ", i)
                 Game.scores[Game.turn][i] += score_inc[i]
             Game.score_inc[Game.turn] = score_inc
             Game.update_turn()
             Game.current_tile = Board.get_next(Game.tileset)
             Game.current_rot = 0
+            Game.check_end_game()
+            # TODO: write check_end_game function
+            # TODO: present score overview if ended
 
     @staticmethod
     def rotate_current(rot=1):
@@ -103,6 +114,11 @@ class Game:
             Board.arrows = []
 
     @staticmethod
+    def check_end_game():
+        Board.count_available()
+        Board.count_available_pairs()
+
+    @staticmethod
     def start():
         Game.running = True
         Game.drawing = True
@@ -115,10 +131,13 @@ class Game:
         Game.tileset = []
         Game.populate_tileset()
 
-        Game.scores = [[0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0]]
-        Game.score_inc = [[0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0]]
+        Game.scores = [[16 for i in range(6)] for p in range(2)]
+        Game.score_inc = [[0 for i in range(6)] for p in range(2)]
+        Game.color_just_finished = [[False for i in range(6)] for p in range(2)]
 
-        Board.blocked = []
+        Board.blocked = set([])
         Board.arrows = []
         Board.color_map = []
         Board.populate_corners()
+        Board.count_available()
+        Board.count_available_pairs()

@@ -12,10 +12,13 @@ screen = pygame.display.set_mode(Board.screen_size)
 pygame.display.set_caption("Genius v0.3")
 icon = pygame.image.load('genius_logo.png')
 pygame.display.set_icon(icon)
+clock = pygame.time.Clock()
+FPS = 10
 
 # Prepare text
 pygame.font.init()
 Game.default_font = pygame.font.SysFont('Arial', 30)
+Game.small_font = pygame.font.SysFont('Arial', 10)
 Game.start()
 
 # Application loop
@@ -51,5 +54,6 @@ while Game.running:
         pygame.display.flip()
         if Game.debugging:
             Game.drawing = False
+    clock.tick(FPS)
 
 pygame.quit()
