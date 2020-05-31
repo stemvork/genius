@@ -1,59 +1,57 @@
 # Imports, init, state variables, screen creation, colors
-import pygame
+import json
 
 # Initialize pygame and state
 from board import Board
+from cursor import Cursor
 from game import Game
+from networking import Network
+from client import *
 
-pygame.init()
-screen = pygame.display.set_mode(Board.screen_size)
-# display = pygame.display.setmode((0, 0), pygame.FULLSCREEN)
-# screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
-pygame.display.set_caption("Genius v0.5")
-icon = pygame.image.load('genius_logo.png')
-pygame.display.set_icon(icon)
-clock = pygame.time.Clock()
-FPS = 10
 
-# Prepare text
-pygame.font.init()
-Game.default_font = pygame.font.SysFont('Arial', 30)
-Game.small_font = pygame.font.SysFont('Arial', 10)
-Game.start()
+def request(n, request_string):  # returns game state
+    game_json = n.send(request_string)
+    game = json.loads(game_json)
+    return game
+
+
+# Start networking and receive Game object
+n = Network()
+player_id = n.get_player_id()
+game_dict = request(n, "get")
+game = Game(with_dict=game_dict)
+running = True
+
+
+# Client globals
+cursor = Cursor(game.take_tile())
+
 
 # Application loop
-while Game.running:
-    # Event checks
+while running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
-            Game.running = False
+            running = False
         if event.type == pygame.KEYDOWN:  # continue game upon right arrow key
             if event.key == pygame.K_SPACE:
-                Game.next_tile_cursor()
+                cursor.replace(game.take_tile(0))
             elif event.key == pygame.K_RIGHT:  # press space to rotate tile
-                Game.rotate_current(-1)
+                cursor.rotate(-1)
             elif event.key == pygame.K_LEFT:
-                Game.rotate_current()
+                cursor.rotate(1)
             elif event.key == pygame.K_n:
-                Game.start()
+                n.send("reset")
         if event.type == pygame.MOUSEBUTTONDOWN:
             if pygame.mouse.get_pressed()[2]:  # right mouse button for undo
-                Game.undo()
+                undo(game, cursor)
             elif pygame.mouse.get_pos()[0] < 800:  # press on board to play
-                Game.play()
+                play(game, cursor)
 
-    # Draw loop
-    if Game.drawing:
-        Game.draw(screen)
-        Game.draw_placed_tiles()
-        [Board.draw_arrow(*x) for x in Board.arrows]  # if Game.debugging else False
-        if Board.is_on_board(Board.get_mouse_axial()):
-            Game.draw_cursor()
-        Game.draw_edge()
+        draw(game)
+        draw_cursor(cursor)
+        draw_edge()
 
         pygame.display.flip()
-        if Game.debugging:
-            Game.drawing = False
     clock.tick(FPS)
 
 pygame.quit()

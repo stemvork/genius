@@ -29,10 +29,16 @@ class Board:
     screen = None
 
     blocked = set([])
-    placed_tiles = []
     arrows = []
     overlays = []
     color_map = []
+
+    def __init__(self):
+        Board.blocked = set([])
+        Board.arrows = []
+        Board.color_map = []
+        Board.count_available()
+        Board.count_available_pairs()
 
     @staticmethod  # draw parent
     def draw(screen):
@@ -189,16 +195,16 @@ class Board:
         return Board.get_distance(Board.get_mouse_axial())
 
     @staticmethod
-    def get_color_map():
+    def get_color_map(game):
         color_map = []
         for i in range(6):  # loop over colors
-            color_map.append(Board.get_color_coord_list(i))
+            color_map.append(Board.get_color_coord_list(game, i))
         return color_map
 
     @staticmethod
-    def get_color_coord_list(color):
+    def get_color_coord_list(game, color):
         coords = []
-        for pt in Board.placed_tiles:
+        for pt in game.placed_tiles:
             if Board.is_on_board(pt[0][0:2]):
                 if pt[1][0] == color:
                     coords.append(pt[0][0:2])
@@ -315,7 +321,19 @@ class Board:
         return True
 
     @staticmethod
-    def has_neighbor(coord, current_rot):
+    def update_blocked(game):
+        for pt in game.placed_tiles:
+            (q, r, k) = pt[0]
+            coord = (q, r)
+            if Board.is_on_board(coord):
+                Board.blocked.add(coord)
+            neigh = Hex.hex_neighbor(coord, k)
+            if Board.is_on_board(neigh):
+                Board.blocked.add(neigh)
+
+    @staticmethod
+    def has_neighbor(game, coord, current_rot):
+        Board.update_blocked(game)
         coord_neighs = []
         for k in range(6):
             if k != current_rot:
@@ -332,19 +350,13 @@ class Board:
         return False
 
     @staticmethod
-    def place(current_tile, current_rot, coord=None):
-        # print("placing tile", coord, current_rot, current_tile)
+    def place(game, current_tile, current_rot, coord=None):
         if not coord:
             coord = Board.get_mouse_axial()
-            if not Board.has_neighbor(coord, current_rot):
+            if not Board.has_neighbor(game, coord, current_rot):
                 return False
         tile = ((*coord, current_rot), current_tile)
-        neighbor = Hex.hex_neighbor(coord, current_rot)
-        Board.blocked.add(coord)
-        if Board.is_on_board(neighbor):
-            Board.blocked.add(tuple(neighbor))
-
-        Board.placed_tiles.append(tile)
+        game.placed_tiles.append(tile)
         return True
 
     @staticmethod
@@ -394,8 +406,8 @@ class Board:
         return count
 
     @staticmethod
-    def score_line(tile):
-        Board.update_color_map()
+    def score_line(game, tile):
+        Board.update_color_map(game)
         score_inc = [0, 0, 0, 0, 0, 0]  # prepare scoring
         t_coord = tile[0][0:2]
         tk = tile[0][2]
@@ -415,30 +427,23 @@ class Board:
         return score_inc
 
     @staticmethod
-    def score_tile():
+    def score_tile(game):
         Board.arrows = []  # reset board arrows
 
-        tile = Board.placed_tiles[len(Board.placed_tiles) - 1]  # get newest tile
+        tile = game.placed_tiles[len(game.placed_tiles) - 1]  # get newest tile
         tk = tile[0][2]
 
         q_coord = Board.get_other_coord(tile)
         qk = (tk + 3) % 6
         q_tile = ((*q_coord, qk), (tile[1][1], tile[1][0]))
 
-        score_tile = Board.score_line(tile)
-        score_q_tile = Board.score_line(q_tile)
+        score_tile = Board.score_line(game, tile)
+        score_q_tile = Board.score_line(game, q_tile)
         score_inc = [a + b for a, b in zip(score_tile, score_q_tile)]
 
         return score_inc
 
     @staticmethod
-    def update_color_map():
-        Board.color_map = Board.get_color_map()
+    def update_color_map(game):
+        Board.color_map = Board.get_color_map(game)
 
-    @staticmethod
-    def populate_corners():
-        Board.placed_tiles = []
-        for c in range(6):
-            corner_coord = Hex.axial_corners[c]
-            # corner_tile = ((*corner_coord, c), (c, c))
-            Board.place((c, c), c, corner_coord)
