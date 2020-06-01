@@ -1,14 +1,17 @@
 import socket
-import json
 
 packet_size = 2048
 packet_count = 2
 
 
 class Network:
-    def __init__(self):
+    def __init__(self, addr=None):
         self.client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.server = "192.168.0.101"
+        # self.server = "192.168.0.101"  # personal
+        if not addr:
+            self.server = "192.168.0.103"  # school
+        else:
+            self.server = addr
         self.port = 5555
         self.addr = (self.server, self.port)
         # Try to connect, receive player_id

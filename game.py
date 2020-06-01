@@ -1,35 +1,40 @@
 import random
-import json
 from hex import Hex
 
 
 # TODO: Minimize size of dict sent over network, updates only
 class Game:
-    def __init__(self, server=False, new_game_id=None, with_dict=None):
+    # TODO: Rewrite constructor of Game()
+    # None --> If server logic, populate the game state
+    # None --> If client logic, do not populate, game state will be requested
+    # NB: Client does add the player to the dict.
+    def __init__(self, player=None, new_game_id=None, player_num=2, server=False):
+        self.id = -1
         self.placed_tiles = []
+        self.tileset = []
+        self.scores = []
+        self.score_inc = []
+        self.turn = 0
+        self.players = {}
+        self.ready = False
         if server:
             self.id = new_game_id
             self.tileset = self.populate_tileset()
             self.populate_corners()
+            self.scores = []
+            for p in range(player_num):
+                self.scores.append([0] * 6)
+            self.score_inc = []
+            for p in range(player_num):
+                self.score_inc.append([0] * 6)
         else:
-            self.id = -1
-            self.tileset = []
-        self.turn = 0
-        self.scores = [[0 for i in range(6)] for p in range(2)]
-        self.score_inc = [[0 for i in range(6)] for p in range(2)]
-        self.player_names = ["Joana", "Jasper"]
-        self.ready = False
-        if with_dict:
-            self.update_state(with_dict)
+            if player:
+                self.players[player[0]] = player[1]
 
     def populate_corners(self):
         for c in range(6):
             corner_coord = Hex.axial_corners[c]
             self.placed_tiles.append(((*corner_coord, c), (c, c)))
-
-    def place(self, tile):
-        self.placed_tiles.append(tile)
-        self.update_turn()
 
     def update_turn(self):
         self.turn = 1 if self.turn == 0 else 0
@@ -52,15 +57,5 @@ class Game:
     def take_tile(self):
         return self.tileset.pop(0)
 
-    def update_state(self, game_dict):
-        print(game_dict)
-        self.__dict__.update(game_dict)
-
-    def get_state(self, network):
-        response = network.send("get")
-        self.update_state(json.loads(response))
-
-    def send_state(self, network):
-        game_json = json.dumps(self.__dict__)
-        response = network.send(game_json)
-        self.update_state(json.loads(response))
+    def update(self, state):
+        self.__dict__.update(state)

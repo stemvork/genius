@@ -1,44 +1,63 @@
 # General libraries
 from random import choice
-import pygame as pg
+import pygame
 from math import sqrt, floor
 
 # Project files
 from hex import Hex
 from shapes import Shapes
 
+# Prepare text
+pygame.font.init()
+
 
 class Board:
     # Board sizes
-    width = 800
-    height = 800
-    board_size = (width, height)
-    board_center = (width / 2, height / 2)
-
-    # Control sizes
-    control_width = 300
-    screen_size = (width + control_width, height)
-
-    # Hex sizes
-    size = 25
-    line_width = 1
-
-    # Colors
-    tile_color = pg.Color('#555555')
-    colors = [pg.Color(c) for c in ('#324B4B', '#D56CA5', '#69E1FA', '#5292BD', '#B3E08B', '#E25E3A')]
     screen = None
 
-    blocked = set([])
-    arrows = []
-    overlays = []
-    color_map = []
-
-    def __init__(self):
+    def __init__(self, mini=False):
         Board.blocked = set([])
         Board.arrows = []
         Board.color_map = []
+        Board.overlays = []
         Board.count_available()
         Board.count_available_pairs()
+
+        Board.width = 800
+        Board.height = 800
+        Board.board_size = (Board.width, Board.height)
+        Board.board_center = (Board.width / 2, Board.height / 2)
+
+        # Control sizes
+        Board.control_width = 300
+        Board.screen_size = (Board.width + Board.control_width, Board.height)
+
+        # Hex sizes
+        Board.size = 25
+        Board.line_width = 1
+
+        Board.mini = mini
+        if mini:
+            Board.width = Board.width // 2
+            Board.height = Board.height // 2
+            Board.board_size = tuple([x // 2 for x in list(Board.board_size)])
+            Board.board_center = tuple([x // 2 for x in list(Board.board_center)])
+            Board.control_width = Board.control_width // 2
+            Board.screen_size = tuple([x // 2 for x in list(Board.screen_size)])
+            Board.size = Board.size / 2
+            # Board.line_width = 1
+
+        # Colors
+        Board.tile_color = pygame.Color('#555555')
+        Board.colors = [pygame.Color(c) for c in ('#324B4B', '#D56CA5', '#69E1FA', '#5292BD', '#B3E08B', '#E25E3A')]
+
+        # Fonts
+        if mini:
+            Board.default_font = pygame.font.SysFont("Arial", 30 // 2)
+            Board.small_font = pygame.font.SysFont("Arial", 10 // 2)
+        else:
+            Board.default_font = pygame.font.SysFont("Arial", 30)
+            Board.small_font = pygame.font.SysFont("Arial", 10)
 
     @staticmethod  # draw parent
     def draw(screen):
@@ -49,7 +68,12 @@ class Board:
 
     # noinspection PyUnusedLocal
     @staticmethod  # draw control
-    def draw_control(font, small_font, scores, inc, turn, names, tileset_count):
+    def draw_control(game):
+        scores = game.scores
+        inc = game.score_inc
+        turn = game.turn
+        names = game.players
+        tileset_count = len(game.tileset)
         # Set convenient dimensions
         square_count = 19
         sz = floor(Board.control_width / square_count)
@@ -64,27 +88,31 @@ class Board:
         # Indicate current player with bg-color and alternate fg-color
         for p in range(2):
             current_player = p == turn
-            bg_color = Board.colors[0].lerp(pg.Color(0, 0, 0), 0.4)
-            Board.draw_control_names(control_dims, names, font, bg_color, current_player, p)
+            bg_color = Board.colors[0].lerp(pygame.Color(0, 0, 0), 0.4)
+            Board.draw_control_names(control_dims, names, bg_color, current_player, p)
 
             # Draw the actual scoring squares
-            Board.draw_control_squares(control_dims, scores, inc, small_font, current_player, p)
+            Board.draw_control_squares(control_dims, scores, inc, current_player, p)
 
     @staticmethod  # draw control helper
-    def draw_control_names(control_dims, names, font, bg_color, current_player, p):
+    def draw_control_names(control_dims, names, bg_color, current_player, p):
         (sz, sm, ss, sx, sy, py) = control_dims
         if current_player:
             name_color = Board.colors[2]
-            pg.draw.rect(Board.screen, bg_color, (sx - ss, sy - 3 * ss + p * py, 21 * ss, 10 * ss))
+            pygame.draw.rect(Board.screen, bg_color, (sx - ss, sy - 3 * ss + p * py, 21 * ss, 10 * ss))
         else:
             name_color = (0, 0, 0)
 
-        name_sprite = font.render(names[p], False, name_color)
-        name_coords = (Board.screen_size[0] - ss - font.size(names[p])[0], 8 + p * py)
+        if p >= len(names):
+            current_name = "Jasper"
+        else:
+            current_name = names[str(p)]
+        name_sprite = Board.default_font.render(current_name, False, name_color)
+        name_coords = (Board.screen_size[0] - ss - Board.default_font.size(current_name)[0], 8 + p * py)
         Board.screen.blit(name_sprite, name_coords)
 
     @staticmethod  # draw control squares and arrows and text
-    def draw_control_squares(control_dims, scores, inc, small_font, current_player, p):
+    def draw_control_squares(control_dims, scores, inc, current_player, p):
         (sz, sm, ss, sx, sy, py) = control_dims
 
         for j in range(6):
@@ -92,12 +120,12 @@ class Board:
                 # Draw blank rectangles
                 score_rect_dim = (sx + i * ss, sy + j * ss + p * py, sz, sz)
                 score_rect_color = (100, 100, 100) if i < 10 else (170, 170, 170)
-                pg.draw.rect(Board.screen, score_rect_color, score_rect_dim)
+                pygame.draw.rect(Board.screen, score_rect_color, score_rect_dim)
 
                 # Draw the score text underneath
                 if j == 0:
-                    score_text_dim = pg.Rect((sx + i * ss, sy + 6 * ss + p * py, sz, sz))
-                    score_text = small_font.render(str(i), False, (255, 255, 255))
+                    score_text_dim = pygame.Rect((sx + i * ss, sy + 6 * ss + p * py, sz, sz))
+                    score_text = Board.small_font.render(str(i), False, (255, 255, 255))
                     score_text_rect = score_text.get_rect(center=score_text_dim.center)
                     Board.screen.blit(score_text, score_text_rect)
 
@@ -105,11 +133,11 @@ class Board:
             ac = Board.colors[0] if current_player else Board.colors[2]
             aw = inc[p][j] * sz
             ax = sx + sm + scores[p][j] * ss - aw
-            pg.draw.rect(Board.screen, ac, (ax, sy + sz / 2 - 2 + j * ss + p * py, aw, 4))
+            pygame.draw.rect(Board.screen, ac, (ax, sy + sz / 2 - 2 + j * ss + p * py, aw, 4))
 
             # Draw the score token
             score_token_dim = (sx + scores[p][j] * ss, sy + j * ss + p * py, sz, sz)
-            pg.draw.rect(Board.screen, Shapes.sprite_colors[j], score_token_dim)
+            pygame.draw.rect(Board.screen, Shapes.sprite_colors[j], score_token_dim)
 
     @staticmethod  # abbreviation
     def draw_empty_hex(q, r):
@@ -125,8 +153,9 @@ class Board:
     def draw_hexagon(center, s, fill_color, hex_screen=None):
         if not hex_screen:
             hex_screen = Board.screen
-        pg.draw.polygon(hex_screen, fill_color, [Hex.hex_corner(center, s, p) for p in range(6)])
-        pg.draw.polygon(hex_screen, Board.colors[0], [Hex.hex_corner(center, s, p) for p in range(6)], Board.line_width)
+        pygame.draw.polygon(hex_screen, fill_color, [Hex.hex_corner(center, s, p) for p in range(6)])
+        pygame.draw.polygon(hex_screen, Board.colors[0], [Hex.hex_corner(center, s, p) for p in range(6)],
+                            Board.line_width)
 
     @staticmethod
     def draw_hexagon_axial(q, r, fill_color, hex_screen=None):
@@ -156,7 +185,7 @@ class Board:
 
     @staticmethod
     def draw_overlays():
-        overlay_surface = pg.Surface(Board.screen.get_size())
+        overlay_surface = pygame.Surface(Board.screen.get_size())
         overlay_surface.set_colorkey((0, 0, 0))
         overlay_surface.set_alpha(100)
         for o in Board.overlays:
@@ -170,13 +199,13 @@ class Board:
     def draw_shape(shape_color, ppts):
         color1 = Shapes.get_sprite_color(shape_color)
         if shape_color in [0, 2, 4]:
-            pg.draw.polygon(Board.screen, color1, ppts)
+            pygame.draw.polygon(Board.screen, color1, ppts)
         elif shape_color == 1:
             Board.draw_hexagon(*ppts, color1)
         elif shape_color == 3:
-            pg.draw.circle(Board.screen, color1, *ppts)
+            pygame.draw.circle(Board.screen, color1, *ppts)
         elif shape_color == 5:
-            pg.draw.circle(Board.screen, color1, *ppts)
+            pygame.draw.circle(Board.screen, color1, *ppts)
 
     @staticmethod
     def draw_ring(center, n, fill_color):
@@ -185,7 +214,7 @@ class Board:
 
     @staticmethod
     def get_mouse_axial():
-        pos = pg.mouse.get_pos()
+        pos = pygame.mouse.get_pos()
         q = (2. / 3 * (pos[0] - Board.width / 2)) / Board.size
         r = (-1. / 3 * (pos[0] - Board.width / 2) + sqrt(3) / 3 * (pos[1] - Board.height / 2)) / Board.size
         return Hex.hex_round((q, r))
@@ -252,31 +281,6 @@ class Board:
             return False
         else:
             return True
-
-    @staticmethod
-    def is_legal(coords):
-        (q, r, k) = coords
-        tile = (q, r)
-        if Board.is_on_board((q, r)):
-            neighbor = Hex.hex_neighbor((q, r), k)
-            # Check if clicked on 2-player board => distance 6
-            if Board.is_on_board(neighbor):
-                # exit if square is non-empty
-                if tile in Board.blocked:
-                    return False
-                elif neighbor in Board.blocked:
-                    return False
-                else:
-                    distances_tile = [Hex.hex_distance(tile, pt[0][0:2]) for pt in Board.placed_tiles]
-                    distances_other = [Hex.hex_distance(tile, Board.get_other_coord(pt)) for pt in Board.placed_tiles]
-                    neighbor_tile = [Hex.hex_distance(neighbor, pt[0][0:2]) for pt in Board.placed_tiles]
-                    neighbor_other = [Hex.hex_distance(neighbor, Board.get_other_coord(pt)) for pt in
-                                      Board.placed_tiles]
-                    distances = distances_tile + distances_other + neighbor_tile + neighbor_other
-                    if min(distances) > 1:
-                        return False
-                    else:
-                        return True
 
     @staticmethod
     def is_touching(a, b):
@@ -369,13 +373,15 @@ class Board:
 
     @staticmethod
     def draw_arrow(a, b, c, s=1):
+        if Board.mini:
+            s = s / 2
         from_pos = Board.axial_to_screen(a)
         to_pos = Board.axial_to_screen(b)
         if c == 0:
-            pg.draw.line(Board.screen, Shapes.sprite_colors[c], from_pos, to_pos, 3 * s)
-            pg.draw.circle(Board.screen, Shapes.sprite_colors[c], to_pos, 5 * s)
+            pygame.draw.line(Board.screen, Shapes.sprite_colors[c], from_pos, to_pos, 3 * s)
+            pygame.draw.circle(Board.screen, Shapes.sprite_colors[c], to_pos, 5 * s)
         else:
-            pg.draw.circle(Board.screen, Shapes.sprite_colors[c], to_pos, 3 * s)
+            pygame.draw.circle(Board.screen, Shapes.sprite_colors[c], to_pos, 3 * s)
 
     @staticmethod
     def count_available():
@@ -446,4 +452,3 @@ class Board:
     @staticmethod
     def update_color_map(game):
         Board.color_map = Board.get_color_map(game)
-

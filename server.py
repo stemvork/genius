@@ -5,18 +5,16 @@ import json
 
 from game import Game
 
-# server = "192.168.0.101"
-server = ''
-port = 5555
-
-s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+# Allows the address to be reused, preventing block by TCP TIME_WAIT.
+server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
 try:
-    s.bind((server, port))
+    server.bind(('', 5555))
 except socket.error as e:
-    str(e)
+    print("BindException: ", e)
 
-s.listen(2)
+server.listen(2)
 print("Waiting for a connection.")
 
 # Games
@@ -40,7 +38,7 @@ def threaded_client(new_conn, new_player_id, new_game_id):
             # Receive new data
             data = new_conn.recv(packet_size * packet_count).decode()
 
-            # If the game_id is valid ??
+            # If the game_id is valid
             if new_game_id in games:
                 # Select the game with that id
                 game = games[new_game_id]
@@ -53,25 +51,30 @@ def threaded_client(new_conn, new_player_id, new_game_id):
                     if data == "reset":
                         pass
                         # game.resetWent()
+
                     # If request is ACTIVE
                     elif data != "get":
                         game_dict = json.loads(data)
-                        game.__dict__.update(game_dict)
+                        if type(game_dict) is list:
+                            game.players[game_dict[0]] = game_dict[1]
+                        else:
+                            game.__dict__.update(game_dict)
+
                     # Always send new state to everyone
                     data_json = json.dumps(game.__dict__)
                     new_conn.sendall(str.encode(data_json))
             else:
                 break
-        except:
-            break
+        except Exception as ex:
+            print("exception", ex)
 
     # Impossible to send data
     print("Lost connection")
     try:
         del games[new_game_id]
         print("Closing Game", new_game_id)
-    except:
-        pass
+    except Exception as ex:
+        print("Closing exception", ex)
 
     # Closing the connection
     client_count -= 1
@@ -82,9 +85,7 @@ def threaded_client(new_conn, new_player_id, new_game_id):
 while True:
     try:
         # Creating new connection
-        conn, addr = s.accept()
-        # print("Connected to:", addr)
-        # print("Games: ", games)
+        conn, addr = server.accept()
 
         # New client has connected
         client_count += 1
@@ -92,10 +93,10 @@ while True:
         game_id = (client_count - 1) // 2
         if client_count % 2 == 1:
             # Create game object
-            games[game_id] = Game(True, game_id)
-            print("First client to enter game id: ", game_id)
+            games[game_id] = Game(server=True, new_game_id=game_id)
+            # print("First client to enter game id: ", game_id)
         else:
-            print("Second client connecting to game id: ", game_id)
+            # print("Second client connecting to game id: ", game_id)
             games[game_id].ready = True
             player_id = 1
 
