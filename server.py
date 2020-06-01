@@ -5,7 +5,8 @@ import json
 
 from game import Game
 
-server = "192.168.0.101"
+# server = "192.168.0.101"
+server = ''
 port = 5555
 
 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -54,13 +55,10 @@ def threaded_client(new_conn, new_player_id, new_game_id):
                         # game.resetWent()
                     # If request is ACTIVE
                     elif data != "get":
-                        pass
-                        # Process the actual data
-                        # game.play(new_player_id, data)
+                        game_dict = json.loads(data)
+                        game.__dict__.update(game_dict)
                     # Always send new state to everyone
-                    # new_conn.sendall(pickle.dumps(game))
                     data_json = json.dumps(game.__dict__)
-                    # new_conn.sendall(str.encode("updated game status"))
                     new_conn.sendall(str.encode(data_json))
             else:
                 break

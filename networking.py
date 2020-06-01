@@ -1,4 +1,5 @@
 import socket
+import json
 
 packet_size = 2048
 packet_count = 2
@@ -30,8 +31,8 @@ class Network:
             # Send the encoded request string / data
             self.client.send(str.encode(data))
 
-            # Return the obtained answer from server
-            return self.client.recv(packet_size * packet_count)
-            # return pickle.loads(self.client.recv(2048*2))
+            # Receive server response
+            response = self.client.recv(packet_size * packet_count).decode()
+            return response
         except socket.error as e:
             print(e)

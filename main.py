@@ -29,6 +29,8 @@ cursor = Cursor(game.take_tile())
 
 # Application loop
 while running:
+    # Get game state from the server
+    game.get_state(n)
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
@@ -47,11 +49,15 @@ while running:
             elif pygame.mouse.get_pos()[0] < 800:  # press on board to play
                 play(game, cursor)
 
-        draw(game)
-        draw_cursor(cursor)
-        draw_edge()
+        # Send game state to network n and update own dictionary with server state
+        game.send_state(n)
+        print("now to play: ", game.player_names[game.turn])
 
-        pygame.display.flip()
+    draw(game)
+    draw_cursor(cursor)
+    draw_edge()
+
+    pygame.display.flip()
     clock.tick(FPS)
 
 pygame.quit()

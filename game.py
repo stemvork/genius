@@ -1,4 +1,5 @@
 import random
+import json
 from hex import Hex
 
 
@@ -52,4 +53,14 @@ class Game:
         return self.tileset.pop(0)
 
     def update_state(self, game_dict):
+        print(game_dict)
         self.__dict__.update(game_dict)
+
+    def get_state(self, network):
+        response = network.send("get")
+        self.update_state(json.loads(response))
+
+    def send_state(self, network):
+        game_json = json.dumps(self.__dict__)
+        response = network.send(game_json)
+        self.update_state(json.loads(response))

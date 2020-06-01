@@ -1,7 +1,6 @@
 import pygame
 from board import Board
 
-
 pygame.init()
 screen = pygame.display.set_mode(Board.screen_size)
 # display = pygame.display.setmode((0, 0), pygame.FULLSCREEN)
@@ -17,7 +16,7 @@ color_just_finished = []
 # Prepare text
 pygame.font.init()
 default_font = pygame.font.SysFont("Arial", 30)
-small_font   = pygame.font.SysFont("Arial", 10)
+small_font = pygame.font.SysFont("Arial", 10)
 
 
 def draw(game):
@@ -84,4 +83,3 @@ def play(game, cursor):
 
 def check_end_game():
     pass
-
