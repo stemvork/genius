@@ -9,7 +9,7 @@ class Game:
         self.placed_tiles = []
         if server:
             self.id = new_game_id
-            self.tileset = self.populate_tileset()
+            self.populate_tileset()
             self.populate_corners()
         else:
             self.id = -1
@@ -34,9 +34,8 @@ class Game:
     def update_turn(self):
         self.turn = 1 if self.turn == 0 else 0
 
-    @staticmethod
-    def populate_tileset():
-        tileset = []
+    def populate_tileset(self):
+        self.tileset = []
         for c1 in range(6):
             for c2 in range(6):
                 max_i = 0
@@ -45,9 +44,8 @@ class Game:
                 elif c1 < c2:
                     max_i = 6
                 for i in range(max_i):
-                    tileset.append((c1, c2))
-        random.shuffle(tileset)
-        return tileset
+                    self.tileset.append((c1, c2))
+        random.shuffle(self.tileset)
 
     def take_tile(self):
         return self.tileset.pop(0)

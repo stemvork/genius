@@ -5,22 +5,16 @@ import json
 from board import Board
 from cursor import Cursor
 from game import Game
-from networking import Network
 from client import *
 
 
-def request(n, request_string):  # returns game state
-    game_json = n.send(request_string)
-    game = json.loads(game_json)
-    return game
-
-
 # Start networking and receive Game object
-n = Network()
-player_id = n.get_player_id()
-game_dict = request(n, "get")
-game = Game(with_dict=game_dict)
+player_id = 0
+game = Game()
+game.populate_tileset()
+game.populate_corners()
 running = True
+print(game.tileset)
 
 
 # Client globals
@@ -30,7 +24,6 @@ cursor = Cursor(game.take_tile())
 # Application loop
 while running:
     # Get game state from the server
-    game.get_state(n)
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
@@ -42,7 +35,7 @@ while running:
             elif event.key == pygame.K_LEFT:
                 cursor.rotate(1)
             elif event.key == pygame.K_n:
-                n.send("reset")
+                game = Game()
         if event.type == pygame.MOUSEBUTTONDOWN:
             if pygame.mouse.get_pressed()[2]:  # right mouse button for undo
                 undo(game, cursor)
@@ -50,7 +43,6 @@ while running:
                 play(game, cursor)
 
         # Send game state to network n and update own dictionary with server state
-        game.send_state(n)
         print("now to play: ", game.player_names[game.turn])
 
     draw(game)
