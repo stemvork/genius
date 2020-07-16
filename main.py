@@ -6,7 +6,13 @@ from board import Board
 from cursor import Cursor
 from game import Game
 from client import *
+from networking import Network
 
+
+# TODO: Can merge with master if
+# both networked or single player work
+# from the same main.py file
+# for example with a menu
 
 # Start networking and receive Game object
 player_id = 0
